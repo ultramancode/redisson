@@ -505,7 +505,9 @@ public final class ServiceManager {
     }
 
     public void enableBitFieldRO() {
-        bitFieldROEnabled = true;
+        if (!bitFieldROEnabled) {
+            bitFieldROEnabled = true;
+        }
     }
 
     public NameMapper getNameMapper() {

@@ -162,6 +162,8 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
 
     private final AtomicBoolean executed = new AtomicBoolean();
 
+    private volatile boolean bitFieldUsed;
+
     private final DelayStrategy retryDelay;
     private final int retryAttempts;
 
@@ -219,7 +221,10 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
                     referenceType, noRetry, aggregatedCommands);
             executor.execute();
         } else {
-            RedisExecutor<V, R> executor = new RedisBatchExecutor<>(readOnlyMode, nodeSource, codec, command, params, mainPromise, 
+            if (command.getName().startsWith("BITFIELD")) {
+                bitFieldUsed = true;
+            }
+            RedisExecutor<V, R> executor = new RedisBatchExecutor<>(readOnlyMode, nodeSource, codec, command, params, mainPromise,
                     false, connectionManager, objectBuilder, commands, options, index, executed, referenceType, noRetry);
             executor.execute();
         }
@@ -418,7 +423,10 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
                     });
                 }
 
-                CompletionStage<Void> f = loadScripts(r).thenCompose(v -> resolveBitFieldCommands(r));
+                CompletionStage<Void> f = loadScripts(r);
+                if (bitFieldUsed) {
+                    f = f.thenCompose(v -> resolveBitFieldCommands(r));
+                }
                 f.whenComplete((res, ex1) -> {
                     try {
                         if (ex1 != null) {
