@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.redisson.api.BatchOptions;
 import org.redisson.api.RBatch;
 import org.redisson.api.RBitSetAsync;
 import org.redisson.api.RBitSetReactive;
@@ -219,6 +220,127 @@ public class RedissonBitSetTest extends RedisDockerTest {
                 }
 
                 assertThat(errorReplies(node) - errors).isEqualTo(1);
+            } finally {
+                client.shutdown();
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"redis:5.0.14", IMAGE})
+    public void testBatchReadsWithSlaveReadMode(String image) throws Exception {
+        try (Network network = Network.newNetwork();
+             GenericContainer<?> master = createContainerByImage(image).withNetwork(network).withNetworkAliases("master");
+             GenericContainer<?> slave = createContainerByImage(image, "--replicaof", "master", "6379").withNetwork(network)) {
+            master.start();
+            slave.start();
+
+            Config config = new Config();
+            config.useMasterSlaveServers()
+                    .setMasterAddress("redis://" + master.getHost() + ":" + master.getFirstMappedPort())
+                    .addSlaveAddress("redis://" + slave.getHost() + ":" + slave.getFirstMappedPort())
+                    .setReadMode(ReadMode.SLAVE)
+                    .setRetryAttempts(0);
+            RedissonClient client = Redisson.create(config);
+            try {
+                RBitSet bitSet = client.getBitSet("batchReads");
+                bitSet.setLong(0, -1L);
+                Awaitility.await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                        assertThat(bitSet.get(0L)).isTrue());
+
+                BatchOptions.ExecutionMode[] modes = {
+                        BatchOptions.ExecutionMode.IN_MEMORY, BatchOptions.ExecutionMode.IN_MEMORY_ATOMIC};
+                for (BatchOptions.ExecutionMode mode : modes) {
+                    RBatch batch = client.createBatch(BatchOptions.defaults().executionMode(mode));
+                    RFuture<Long> number = batch.getBitSet("batchReads").getLongAsync(0);
+                    RFuture<boolean[]> bits = batch.getBitSet("batchReads").getAsync(0L, 63L, 64L);
+                    RFuture<List<Long>> fields = batch.getBitSet("batchReads")
+                            .bitFieldAsync(BitFieldArgs.create().getUnsigned(8, BitOffset.bit(0)));
+                    batch.execute();
+
+                    assertThat(number.toCompletableFuture().join()).isEqualTo(-1L);
+                    assertThat(bits.toCompletableFuture().join()).containsExactly(true, true, false);
+                    assertThat(fields.toCompletableFuture().join()).containsExactly(255L);
+                }
+
+                String masterStats = master.execInContainer("redis-cli", "INFO", "commandstats").getStdout();
+                String slaveStats = slave.execInContainer("redis-cli", "INFO", "commandstats").getStdout();
+                if (image.equals(IMAGE)) {
+                    // BITFIELD_RO is checked once before the first batch
+                    assertThat(masterStats).contains("cmdstat_bitfield:calls=1,");
+                    assertThat(slaveStats).contains("cmdstat_bitfield_ro:calls=7,");
+
+                    // queued commands use BITFIELD_RO once it's known to be available
+                    RBatch batch = client.createBatch(BatchOptions.defaults()
+                            .executionMode(BatchOptions.ExecutionMode.REDIS_READ_ATOMIC));
+                    RFuture<Long> number = batch.getBitSet("batchReads").getLongAsync(0);
+                    batch.execute();
+                    assertThat(number.toCompletableFuture().join()).isEqualTo(-1L);
+                } else {
+                    assertThat(masterStats).contains("cmdstat_bitfield:calls=8,");
+                }
+            } finally {
+                client.shutdown();
+            }
+        }
+    }
+
+    @Test
+    public void testBitFieldROFallbackInBatch() throws Exception {
+        try (Network network = Network.newNetwork();
+             GenericContainer<?> master = createContainer("--rename-command", "BITFIELD_RO", "BITFIELD_RO_DISABLED")
+                     .withNetwork(network).withNetworkAliases("master");
+             GenericContainer<?> slave = createContainer("--replicaof", "master", "6379",
+                     "--rename-command", "BITFIELD_RO", "BITFIELD_RO_DISABLED").withNetwork(network)) {
+            master.start();
+            slave.start();
+
+            Config config = new Config();
+            config.useMasterSlaveServers()
+                    .setMasterAddress("redis://" + master.getHost() + ":" + master.getFirstMappedPort())
+                    .addSlaveAddress("redis://" + slave.getHost() + ":" + slave.getFirstMappedPort())
+                    .setReadMode(ReadMode.SLAVE)
+                    .setRetryAttempts(0);
+            RedissonClient client = Redisson.create(config);
+            try {
+                RBitSet bitSet = client.getBitSet("batchFallback");
+                bitSet.setLong(0, -1L);
+                Awaitility.await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                        assertThat(bitSet.get(0L)).isTrue());
+
+                long masterErrors = errorReplies(master);
+                long slaveErrors = errorReplies(slave);
+
+                // queued commands of a write transaction are sent to the master
+                RBatch queuedBatch = client.createBatch(BatchOptions.defaults()
+                        .executionMode(BatchOptions.ExecutionMode.REDIS_WRITE_ATOMIC));
+                RFuture<List<Long>> queued = queuedBatch.getBitSet("batchFallback")
+                        .bitFieldAsync(BitFieldArgs.create().getUnsigned(8, BitOffset.bit(0)));
+                queuedBatch.execute();
+                assertThat(queued.toCompletableFuture().join()).containsExactly(255L);
+
+                // a batch with a write is sent to the master
+                RBatch writeBatch = client.createBatch();
+                writeBatch.getBucket("batchWrite").setAsync("value");
+                RFuture<List<Long>> written = writeBatch.getBitSet("batchFallback")
+                        .bitFieldAsync(BitFieldArgs.create().getUnsigned(8, BitOffset.bit(0)));
+                writeBatch.execute();
+                assertThat(written.toCompletableFuture().join()).containsExactly(255L);
+                assertThat(errorReplies(slave) - slaveErrors).isZero();
+
+                for (int i = 0; i < 3; i++) {
+                    RBatch batch = client.createBatch();
+                    RFuture<Long> number = batch.getBitSet("batchFallback").getLongAsync(0);
+                    RFuture<List<Long>> fields = batch.getBitSet("batchFallback")
+                            .bitFieldAsync(BitFieldArgs.create().getUnsigned(8, BitOffset.bit(0)));
+                    batch.execute();
+
+                    assertThat(number.toCompletableFuture().join()).isEqualTo(-1L);
+                    assertThat(fields.toCompletableFuture().join()).containsExactly(255L);
+                }
+
+                assertThat(errorReplies(slave) - slaveErrors).isEqualTo(1);
+                assertThat(errorReplies(master) - masterErrors).isZero();
             } finally {
                 client.shutdown();
             }

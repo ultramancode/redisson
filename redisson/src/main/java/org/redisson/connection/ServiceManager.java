@@ -151,6 +151,8 @@ public final class ServiceManager {
 
     private volatile boolean bitFieldRODisabled;
 
+    private volatile boolean bitFieldROEnabled;
+
     private static final Map<InetSocketAddress, Set<String>> SCRIPT_SHA_CACHE = new ConcurrentHashMap<>();
 
     private static final Map<String, String> SHA_CACHE = new LRUCacheMap<>(500, 0, 0);
@@ -496,6 +498,14 @@ public final class ServiceManager {
 
     public void disableBitFieldRO() {
         bitFieldRODisabled = true;
+    }
+
+    public boolean isBitFieldROEnabled() {
+        return bitFieldROEnabled;
+    }
+
+    public void enableBitFieldRO() {
+        bitFieldROEnabled = true;
     }
 
     public NameMapper getNameMapper() {

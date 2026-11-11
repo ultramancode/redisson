@@ -213,7 +213,8 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
         CompletableFuture<R> mainPromise = createPromise();
         if (isRedisBasedQueue()) {
             boolean isReadOnly = options.getExecutionMode() == ExecutionMode.REDIS_READ_ATOMIC;
-            RedisExecutor<V, R> executor = new RedisQueuedBatchExecutor<>(isReadOnly, nodeSource, codec, command, params, mainPromise,
+            RedisCommand<V> queuedCommand = resolveQueuedBitFieldCommand(command, params);
+            RedisExecutor<V, R> executor = new RedisQueuedBatchExecutor<>(isReadOnly, nodeSource, codec, queuedCommand, params, mainPromise,
                     false, connectionManager, objectBuilder, commands, connections, options, index, executed,
                     referenceType, noRetry, aggregatedCommands);
             executor.execute();
@@ -417,7 +418,7 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
                     });
                 }
 
-                CompletionStage<Void> f = loadScripts(r);
+                CompletionStage<Void> f = loadScripts(r).thenCompose(v -> resolveBitFieldCommands(r));
                 f.whenComplete((res, ex1) -> {
                     try {
                         if (ex1 != null) {
@@ -529,6 +530,67 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
                 connectionManager.getServiceManager().cacheScripts(e.getKey().getClient().getAddr(), e.getValue());
             }
         });
+    }
+
+    // batch commands can't be retried one by one, so BITFIELD_RO is checked with a single read
+    // before BITFIELD reads are sent to a replica
+    private CompletionStage<Void> resolveBitFieldCommands(Map<NodeSource, Entry> entries) {
+        if (!getServiceManager().isBitFieldRODisabled() && !getServiceManager().isBitFieldROEnabled()) {
+            for (Map.Entry<NodeSource, Entry> e : entries.entrySet()) {
+                if (!e.getValue().isReadOnlyMode()) {
+                    continue;
+                }
+                for (BatchCommandData<?, ?> data : e.getValue().getCommands()) {
+                    if (isBitFieldROApplicable(data.getCommand(), data.getParams())) {
+                        CommandAsyncService executor = new CommandAsyncService(connectionManager, objectBuilder, referenceType);
+                        RFuture<Object> check = executor.async(true, e.getKey(), StringCodec.INSTANCE,
+                                RedisCommands.BITFIELD_RO_LONG_LIST, new Object[] {data.getParams()[0]}, false, false);
+                        return check.handle((r, ex) -> {
+                            updateBitFieldCommands(entries);
+                            return null;
+                        });
+                    }
+                }
+            }
+        }
+
+        updateBitFieldCommands(entries);
+        return CompletableFuture.completedFuture(null);
+    }
+
+    private void updateBitFieldCommands(Map<NodeSource, Entry> entries) {
+        for (Entry entry : entries.values()) {
+            boolean readOnly = entry.isReadOnlyMode() && !getServiceManager().isBitFieldRODisabled();
+            for (BatchCommandData<?, ?> data : entry.getCommands()) {
+                if (!isBitFieldROApplicable(data.getCommand(), data.getParams())) {
+                    continue;
+                }
+
+                if (readOnly) {
+                    data.updateCommand(new RedisCommand<>(data.getCommand(), "BITFIELD_RO"));
+                } else {
+                    // BITFIELD is a write command and has to be sent to the master
+                    data.updateCommand(new RedisCommand<>(data.getCommand(), "BITFIELD"));
+                    entry.setReadOnlyMode(false);
+                }
+            }
+        }
+    }
+
+    // queued commands are sent before the batch is executed, so BITFIELD_RO is used only if it's known to be available
+    private <V> RedisCommand<V> resolveQueuedBitFieldCommand(RedisCommand<V> command, Object[] params) {
+        if (!isBitFieldROApplicable(command, params)) {
+            return command;
+        }
+
+        if (options.getExecutionMode() == ExecutionMode.REDIS_WRITE_ATOMIC
+                || getServiceManager().isBitFieldRODisabled()) {
+            return new RedisCommand<>(command, "BITFIELD");
+        }
+        if (getServiceManager().isBitFieldROEnabled()) {
+            return new RedisCommand<>(command, "BITFIELD_RO");
+        }
+        return command;
     }
 
     private void resolveCommands(AtomicInteger attempt, CompletableFuture<Map<MasterSlaveEntry, Entry>> future) {

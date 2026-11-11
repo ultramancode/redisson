@@ -726,7 +726,7 @@ public class CommandAsyncService implements CommandAsyncExecutor {
 
     // BITFIELD read is sent as BITFIELD_RO only if it may be routed to a replica
     // and all its subcommands are GET
-    private boolean isBitFieldROApplicable(RedisCommand<?> command, Object[] params) {
+    protected boolean isBitFieldROApplicable(RedisCommand<?> command, Object[] params) {
         if (command.getName().equals("BITFIELD_RO")) {
             return true;
         }
@@ -778,6 +778,7 @@ public class CommandAsyncService implements CommandAsyncExecutor {
         });
         readPromise.whenComplete((value, error) -> {
             if (error == null) {
+                getServiceManager().enableBitFieldRO();
                 result.complete(value);
             } else if (isBitFieldROUnavailable(error)) {
                 getServiceManager().disableBitFieldRO();
