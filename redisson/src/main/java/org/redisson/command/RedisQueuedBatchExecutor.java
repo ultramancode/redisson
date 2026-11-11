@@ -49,6 +49,11 @@ public class RedisQueuedBatchExecutor<V, R> extends BaseRedisBatchExecutor<V, R>
 
     private final ConcurrentMap<MasterSlaveEntry, ConnectionEntry> connections;
     private final Map<MasterSlaveEntry, Entry> aggregatedCommands;
+    private boolean bitFieldRead;
+
+    public void setBitFieldRead(boolean bitFieldRead) {
+        this.bitFieldRead = bitFieldRead;
+    }
 
     @SuppressWarnings("ParameterNumber")
     public RedisQueuedBatchExecutor(boolean readOnlyMode, NodeSource source, Codec codec, RedisCommand<V> command,
@@ -153,6 +158,13 @@ public class RedisQueuedBatchExecutor<V, R> extends BaseRedisBatchExecutor<V, R>
     protected void sendCommand(CompletableFuture<R> attemptPromise, RedisConnection connection) {
         MasterSlaveEntry msEntry = getEntry();
         ConnectionEntry connectionEntry = connections.get(msEntry);
+
+        RedisCommand<V> command = this.command;
+        if (bitFieldRead) {
+            boolean master = connection.getRedisClient().equals(msEntry.getClient());
+            boolean readOnly = !master && !connectionManager.getServiceManager().isBitFieldRODisabled();
+            command = new RedisCommand<>(command, readOnly ? "BITFIELD_RO" : "BITFIELD");
+        }
 
         boolean syncSlaves = options.getSyncSlaves() > 0;
 

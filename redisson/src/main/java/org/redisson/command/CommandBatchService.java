@@ -216,9 +216,10 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
         if (isRedisBasedQueue()) {
             boolean isReadOnly = options.getExecutionMode() == ExecutionMode.REDIS_READ_ATOMIC;
             RedisCommand<V> queuedCommand = resolveQueuedBitFieldCommand(command, params);
-            RedisExecutor<V, R> executor = new RedisQueuedBatchExecutor<>(isReadOnly, nodeSource, codec, queuedCommand, params, mainPromise,
+            RedisQueuedBatchExecutor<V, R> executor = new RedisQueuedBatchExecutor<>(isReadOnly, nodeSource, codec, queuedCommand, params, mainPromise,
                     false, connectionManager, objectBuilder, commands, connections, options, index, executed,
                     referenceType, noRetry, aggregatedCommands);
+            executor.setBitFieldRead(isReadOnly && isBitFieldROApplicable(command, params));
             executor.execute();
         } else {
             if (command.getName().startsWith("BITFIELD")) {
