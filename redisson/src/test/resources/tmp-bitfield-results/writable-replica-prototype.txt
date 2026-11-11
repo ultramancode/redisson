@@ -1,0 +1,8 @@
+redis:5.0.14 | pair writable-replica SLAVE | fresh READ_ATOMIC x4 | getLong -> FAIL(Redis server response timeou), FAIL(Redis server response timeou), FAIL(Redis server response timeou), FAIL(Redis server response timeou)
+redis:5.0.14 | pair writable-replica SLAVE | fresh READ_ATOMIC x4 | bitField -> FAIL(Redis server response timeou), FAIL(Redis server response timeou), FAIL(Redis server response timeou), FAIL(Redis server response timeou)
+redis:5.0.14 | pair writable-replica MASTER_SLAVE | fresh READ_ATOMIC x4 | getLong -> OK, FAIL(Redis server response timeou), OK, FAIL(Redis server response timeou)
+redis:5.0.14 | pair writable-replica MASTER_SLAVE | fresh READ_ATOMIC x4 | bitField -> OK, FAIL(Redis server response timeou), OK, FAIL(Redis server response timeou)
+redis:8.10 | pair writable-replica SLAVE | fresh READ_ATOMIC x4 | getLong -> OK, OK, OK, OK
+redis:8.10 | pair writable-replica SLAVE | fresh READ_ATOMIC x4 | bitField -> OK, OK, OK, OK
+redis:8.10 | pair writable-replica MASTER_SLAVE | fresh READ_ATOMIC x4 | getLong -> OK, OK, OK, OK
+redis:8.10 | pair writable-replica MASTER_SLAVE | fresh READ_ATOMIC x4 | bitField -> OK, OK, OK, OK

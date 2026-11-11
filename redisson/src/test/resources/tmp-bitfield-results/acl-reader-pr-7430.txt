@@ -1,0 +1,21 @@
+check on master as reader: BITFIELD -> NOPERM User reader has no permissions to run the 'bitfield' command | BITFIELD_RO -> 255
+SLAVE        | no batch          | getLong  -> OK, OK, OK
+SLAVE        | no batch          | bitField -> OK, OK, OK
+SLAVE        | IN_MEMORY         | getLong  -> FAIL(NOPERM User reader has), FAIL(NOPERM User reader has), FAIL(NOPERM User reader has)
+SLAVE        | IN_MEMORY         | bitField -> OK, OK, OK
+SLAVE        | IN_MEMORY_ATOMIC  | getLong  -> FAIL(EXECABORT Transaction ), FAIL(EXECABORT Transaction ), FAIL(EXECABORT Transaction )
+SLAVE        | IN_MEMORY_ATOMIC  | bitField -> OK, OK, OK
+SLAVE        | REDIS_READ_ATOMIC | getLong  -> FAIL(NOPERM User reader has), FAIL(Redis server response ), FAIL(Redis server response )
+SLAVE        | REDIS_READ_ATOMIC | bitField -> OK, OK, OK
+SLAVE        | REDIS_WRITE_ATOMIC | getLong  -> FAIL(Redis server response ), FAIL(Redis server response ), FAIL(Redis server response )
+SLAVE        | REDIS_WRITE_ATOMIC | bitField -> OK, OK, OK
+MASTER_SLAVE | no batch          | getLong  -> OK, OK, OK
+MASTER_SLAVE | no batch          | bitField -> OK, OK, OK
+MASTER_SLAVE | IN_MEMORY         | getLong  -> FAIL(NOPERM User reader has), FAIL(NOPERM User reader has), FAIL(NOPERM User reader has)
+MASTER_SLAVE | IN_MEMORY         | bitField -> OK, OK, OK
+MASTER_SLAVE | IN_MEMORY_ATOMIC  | getLong  -> FAIL(EXECABORT Transaction ), FAIL(EXECABORT Transaction ), FAIL(EXECABORT Transaction )
+MASTER_SLAVE | IN_MEMORY_ATOMIC  | bitField -> OK, OK, OK
+MASTER_SLAVE | REDIS_READ_ATOMIC | getLong  -> FAIL(Redis server response ), FAIL(Redis server response ), FAIL(Redis server response )
+MASTER_SLAVE | REDIS_READ_ATOMIC | bitField -> OK, OK, OK
+MASTER_SLAVE | REDIS_WRITE_ATOMIC | getLong  -> FAIL(Redis server response ), FAIL(Redis server response ), FAIL(Redis server response )
+MASTER_SLAVE | REDIS_WRITE_ATOMIC | bitField -> OK, OK, OK
