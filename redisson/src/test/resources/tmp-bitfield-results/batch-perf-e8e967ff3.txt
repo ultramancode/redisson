@@ -1,0 +1,4 @@
+IN_MEMORY: 500 batches in 2635 ms, 5.27 ms per batch
+REDIS_WRITE_ATOMIC: 500 batches in 3135 ms, 6.27 ms per batch
+IN_MEMORY: 500 batches in 3205 ms, 6.41 ms per batch
+REDIS_WRITE_ATOMIC: 500 batches in 3286 ms, 6.57 ms per batch

@@ -1,0 +1,48 @@
+redis:5.0.14 | pair SLAVE | REDIS_READ_ATOMIC | getLong -> FAIL READONLY You can't write against a read only replica.  / 2nd: FAIL Redis server response timeout (3000 ms) occurred after 0 of 
+redis:5.0.14 | pair SLAVE | REDIS_READ_ATOMIC | bitField -> FAIL Redis server response timeout (3000 ms) occurred after 0 of 
+redis:5.0.14 | pair SLAVE | REDIS_WRITE_ATOMIC | getLong -> OK
+redis:5.0.14 | pair SLAVE | REDIS_WRITE_ATOMIC | bitField -> FAIL Redis server response timeout (3000 ms) occurred after 0 of 
+redis:5.0.14 | pair SLAVE | IN_MEMORY | getLong -> OK
+redis:5.0.14 | pair SLAVE | IN_MEMORY | bitField -> OK
+redis:5.0.14 | pair SLAVE | IN_MEMORY_ATOMIC | getLong -> OK
+redis:5.0.14 | pair SLAVE | IN_MEMORY_ATOMIC | bitField -> OK
+redis:5.0.14 | pair MASTER_SLAVE | REDIS_READ_ATOMIC | getLong -> FAIL Redis server response timeout (3000 ms) occurred after 0 of   / 2nd: OK
+redis:5.0.14 | pair MASTER_SLAVE | REDIS_READ_ATOMIC | bitField -> FAIL Redis server response timeout (3000 ms) occurred after 0 of   / 2nd: OK
+redis:5.0.14 | pair MASTER_SLAVE | REDIS_WRITE_ATOMIC | getLong -> OK
+redis:5.0.14 | pair MASTER_SLAVE | REDIS_WRITE_ATOMIC | bitField -> OK
+redis:5.0.14 | pair MASTER_SLAVE | IN_MEMORY | getLong -> OK
+redis:5.0.14 | pair MASTER_SLAVE | IN_MEMORY | bitField -> OK
+redis:5.0.14 | pair MASTER_SLAVE | IN_MEMORY_ATOMIC | getLong -> OK
+redis:5.0.14 | pair MASTER_SLAVE | IN_MEMORY_ATOMIC | bitField -> OK
+redis:8.10 | pair SLAVE | REDIS_READ_ATOMIC | getLong -> FAIL Redis server response timeout (3000 ms) occurred after 0 of 
+redis:8.10 | pair SLAVE | REDIS_READ_ATOMIC | bitField -> OK
+redis:8.10 | pair SLAVE | REDIS_WRITE_ATOMIC | getLong -> OK
+redis:8.10 | pair SLAVE | REDIS_WRITE_ATOMIC | bitField -> OK
+redis:8.10 | pair SLAVE | IN_MEMORY | getLong -> OK
+redis:8.10 | pair SLAVE | IN_MEMORY | bitField -> OK
+redis:8.10 | pair SLAVE | IN_MEMORY_ATOMIC | getLong -> OK
+redis:8.10 | pair SLAVE | IN_MEMORY_ATOMIC | bitField -> OK
+redis:8.10 | pair MASTER_SLAVE | REDIS_READ_ATOMIC | getLong -> FAIL Redis server response timeout (3000 ms) occurred after 0 of   / 2nd: OK
+redis:8.10 | pair MASTER_SLAVE | REDIS_READ_ATOMIC | bitField -> FAIL Redis server response timeout (3000 ms) occurred after 0 of   / 2nd: OK
+redis:8.10 | pair MASTER_SLAVE | REDIS_WRITE_ATOMIC | getLong -> OK
+redis:8.10 | pair MASTER_SLAVE | REDIS_WRITE_ATOMIC | bitField -> OK
+redis:8.10 | pair MASTER_SLAVE | IN_MEMORY | getLong -> OK
+redis:8.10 | pair MASTER_SLAVE | IN_MEMORY | bitField -> OK
+redis:8.10 | pair MASTER_SLAVE | IN_MEMORY_ATOMIC | getLong -> OK
+redis:8.10 | pair MASTER_SLAVE | IN_MEMORY_ATOMIC | bitField -> OK
+redis:5.0.14 | 1node SLAVE | REDIS_READ_ATOMIC | getLong -> OK
+redis:5.0.14 | 1node SLAVE | REDIS_READ_ATOMIC | bitField -> FAIL Redis server response timeout (3000 ms) occurred after 0 of 
+redis:5.0.14 | 1node SLAVE | REDIS_WRITE_ATOMIC | getLong -> OK
+redis:5.0.14 | 1node SLAVE | REDIS_WRITE_ATOMIC | bitField -> FAIL Redis server response timeout (3000 ms) occurred after 0 of 
+redis:5.0.14 | 1node SLAVE | IN_MEMORY | getLong -> OK
+redis:5.0.14 | 1node SLAVE | IN_MEMORY | bitField -> OK
+redis:5.0.14 | 1node SLAVE | IN_MEMORY_ATOMIC | getLong -> OK
+redis:5.0.14 | 1node SLAVE | IN_MEMORY_ATOMIC | bitField -> OK
+redis:8.10 | 1node SLAVE | REDIS_READ_ATOMIC | getLong -> OK
+redis:8.10 | 1node SLAVE | REDIS_READ_ATOMIC | bitField -> OK
+redis:8.10 | 1node SLAVE | REDIS_WRITE_ATOMIC | getLong -> OK
+redis:8.10 | 1node SLAVE | REDIS_WRITE_ATOMIC | bitField -> OK
+redis:8.10 | 1node SLAVE | IN_MEMORY | getLong -> OK
+redis:8.10 | 1node SLAVE | IN_MEMORY | bitField -> OK
+redis:8.10 | 1node SLAVE | IN_MEMORY_ATOMIC | getLong -> OK
+redis:8.10 | 1node SLAVE | IN_MEMORY_ATOMIC | bitField -> OK
