@@ -104,3 +104,47 @@ Run the class without it.
 mvn -Dmaven.test.skip=false -Djacoco.skip=true -pl redisson \
   -Dtest='RedissonBatchTest, !RedissonBatchTest#testPerformance*' test
 ```
+
+## After PR #7439 was merged
+
+PR #7439 was merged on 2026-11-20 as `07d172270`. The files below come from its last review round.
+
+| Path | What it is |
+| --- | --- |
+| `src/test/java/org/redisson/TmpMixedBatchAclTest.java` | A user that may not run write commands sends batches that mix a bit field read with another command. 96 rows. The output file is set with `-Dtmp.out` |
+| `*-pr-7439.txt` | Output of the five tests for the final code of the PR, `6f83e30cc`, applied on master `969e2671d` |
+| `tools/compare-mixed.py` | Compares two outputs of `TmpMixedBatchAclTest` row by row |
+| `tools/mutate-batch.py` | Mutations of `CommandBatchService`. The patterns match the merged code |
+| `tools/mutate-check.py` | Mutations of `CommandAsyncService.checkBitFieldRO()` |
+
+`run-matrix.sh` doesn't run `TmpMixedBatchAclTest`, and `run-mutations.sh` still calls the old `mutate.py`.
+The new scripts were run by hand. Each mutated file was compiled into `redisson/target/classes` with
+`javac --release 8`, then these tests of `RedissonBitSetTest` were run: `testBatchReadsWithSlaveReadMode`,
+`testBitFieldROFallbackInBatch`, `testBitFieldROFallbackInQueuedBatch`,
+`testQueuedBitFieldReadsWithoutWritePermission`, `testBatchBitFieldReadsWithoutWritePermission` and
+`testBitFieldReadsOnWritePathInBatch`.
+
+### Results at `pr-7439`
+
+Compared with `main`, the master before PR #7430.
+
+| Output | Rows | All runs OK | Better | Worse |
+| --- | --- | --- | --- | --- |
+| `matrix` | 48 | 38 | 13 | 2 |
+| `acl-reader` | 20 | 16 | 11 | 0 |
+| `fresh-read-atomic` | 12 | 5 | 1 | 1 |
+| `writable-replica` | 8 | 6 | 0 | 1 |
+
+The worse rows are all `bitField(GET)` in a queued batch with Redis 5.0.14 and `ReadMode.MASTER_SLAVE`.
+They were OK before PR #7430 and fail since it was merged. PR #7439 didn't change them.
+Queued batches don't check BITFIELD_RO themselves. That is the subject of the next PR.
+
+`mixed-acl` has 96 rows. Against the master after PR #7430 (`ff894127f`) 30 rows are better and none is worse.
+The output of that master wasn't kept.
+
+### Mutations at `pr-7439`
+
+- `mutate-check.py`: `check-no-available` and `check-no-unavailable` both make tests fail.
+- `mutate-batch.py`: `in-memory-gate-off`, `queued-gate-off`, `check-only-read-batches`,
+  `master-batch-always-bitfield`, `ignore-unavailable` and `no-check` make tests fail.
+  `unknown-uses-bitfield-ro` doesn't. No test covers a check that fails with an unrelated error.

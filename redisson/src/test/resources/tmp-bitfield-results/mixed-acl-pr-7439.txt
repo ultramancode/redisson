@@ -1,0 +1,97 @@
+as reader on master: BITFIELD -> NOPERM User reader has no permissions to run the 'bitfield' command | BITFIELD_RO -> 255 | PUBLISH -> 0 | EVAL -> 1 | SET -> NOPERM User reader has no permissions to run the 'set' command
+SLAVE        | fresh | IN_MEMORY          | none    | bitField -> OK, OK
+SLAVE        | fresh | IN_MEMORY          | none    | getLong  -> OK, OK
+SLAVE        | fresh | IN_MEMORY          | publish | bitField -> OK, OK
+SLAVE        | fresh | IN_MEMORY          | publish | getLong  -> OK, OK
+SLAVE        | fresh | IN_MEMORY          | eval    | bitField -> OK, OK
+SLAVE        | fresh | IN_MEMORY          | eval    | getLong  -> OK, OK
+SLAVE        | fresh | IN_MEMORY          | set     | bitField -> FAIL(NOPERM User reader has no permissions to run the 'set' comma), FAIL(NOPERM User reader has no permissions to run the 'set' comma)
+SLAVE        | fresh | IN_MEMORY          | set     | getLong  -> FAIL(NOPERM User reader has no permissions to run the 'set' comma), FAIL(NOPERM User reader has no permissions to run the 'set' comma)
+SLAVE        | fresh | IN_MEMORY_ATOMIC   | none    | bitField -> OK, OK
+SLAVE        | fresh | IN_MEMORY_ATOMIC   | none    | getLong  -> OK, OK
+SLAVE        | fresh | IN_MEMORY_ATOMIC   | publish | bitField -> OK, OK
+SLAVE        | fresh | IN_MEMORY_ATOMIC   | publish | getLong  -> OK, OK
+SLAVE        | fresh | IN_MEMORY_ATOMIC   | eval    | bitField -> OK, OK
+SLAVE        | fresh | IN_MEMORY_ATOMIC   | eval    | getLong  -> OK, OK
+SLAVE        | fresh | IN_MEMORY_ATOMIC   | set     | bitField -> FAIL(EXECABORT Transaction discarded because of previous errors.), FAIL(EXECABORT Transaction discarded because of previous errors.)
+SLAVE        | fresh | IN_MEMORY_ATOMIC   | set     | getLong  -> FAIL(EXECABORT Transaction discarded because of previous errors.), FAIL(EXECABORT Transaction discarded because of previous errors.)
+SLAVE        | fresh | REDIS_WRITE_ATOMIC | none    | bitField -> OK, OK
+SLAVE        | fresh | REDIS_WRITE_ATOMIC | none    | getLong  -> FAIL(Redis server response timeout (3000 ms) occurred after 0 of ), FAIL(Redis server response timeout (3000 ms) occurred after 0 of )
+SLAVE        | fresh | REDIS_WRITE_ATOMIC | publish | bitField -> OK, OK
+SLAVE        | fresh | REDIS_WRITE_ATOMIC | publish | getLong  -> FAIL(Redis server response timeout (3000 ms) occurred after 0 of ), FAIL(Redis server response timeout (3000 ms) occurred after 0 of )
+SLAVE        | fresh | REDIS_WRITE_ATOMIC | eval    | bitField -> OK, OK
+SLAVE        | fresh | REDIS_WRITE_ATOMIC | eval    | getLong  -> FAIL(Redis server response timeout (3000 ms) occurred after 0 of ), FAIL(Redis server response timeout (3000 ms) occurred after 0 of )
+SLAVE        | fresh | REDIS_WRITE_ATOMIC | set     | bitField -> FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD), FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD)
+SLAVE        | fresh | REDIS_WRITE_ATOMIC | set     | getLong  -> FAIL(NOPERM User reader has no permissions to run the 'set' comma), FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD)
+SLAVE        | known | IN_MEMORY          | none    | bitField -> OK, OK
+SLAVE        | known | IN_MEMORY          | none    | getLong  -> OK, OK
+SLAVE        | known | IN_MEMORY          | publish | bitField -> OK, OK
+SLAVE        | known | IN_MEMORY          | publish | getLong  -> OK, OK
+SLAVE        | known | IN_MEMORY          | eval    | bitField -> OK, OK
+SLAVE        | known | IN_MEMORY          | eval    | getLong  -> OK, OK
+SLAVE        | known | IN_MEMORY          | set     | bitField -> FAIL(NOPERM User reader has no permissions to run the 'set' comma), FAIL(NOPERM User reader has no permissions to run the 'set' comma)
+SLAVE        | known | IN_MEMORY          | set     | getLong  -> FAIL(NOPERM User reader has no permissions to run the 'set' comma), FAIL(NOPERM User reader has no permissions to run the 'set' comma)
+SLAVE        | known | IN_MEMORY_ATOMIC   | none    | bitField -> OK, OK
+SLAVE        | known | IN_MEMORY_ATOMIC   | none    | getLong  -> OK, OK
+SLAVE        | known | IN_MEMORY_ATOMIC   | publish | bitField -> OK, OK
+SLAVE        | known | IN_MEMORY_ATOMIC   | publish | getLong  -> OK, OK
+SLAVE        | known | IN_MEMORY_ATOMIC   | eval    | bitField -> OK, OK
+SLAVE        | known | IN_MEMORY_ATOMIC   | eval    | getLong  -> OK, OK
+SLAVE        | known | IN_MEMORY_ATOMIC   | set     | bitField -> FAIL(EXECABORT Transaction discarded because of previous errors.), FAIL(EXECABORT Transaction discarded because of previous errors.)
+SLAVE        | known | IN_MEMORY_ATOMIC   | set     | getLong  -> FAIL(EXECABORT Transaction discarded because of previous errors.), FAIL(EXECABORT Transaction discarded because of previous errors.)
+SLAVE        | known | REDIS_WRITE_ATOMIC | none    | bitField -> OK, OK
+SLAVE        | known | REDIS_WRITE_ATOMIC | none    | getLong  -> OK, OK
+SLAVE        | known | REDIS_WRITE_ATOMIC | publish | bitField -> OK, OK
+SLAVE        | known | REDIS_WRITE_ATOMIC | publish | getLong  -> OK, OK
+SLAVE        | known | REDIS_WRITE_ATOMIC | eval    | bitField -> OK, OK
+SLAVE        | known | REDIS_WRITE_ATOMIC | eval    | getLong  -> OK, OK
+SLAVE        | known | REDIS_WRITE_ATOMIC | set     | bitField -> FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD), FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD)
+SLAVE        | known | REDIS_WRITE_ATOMIC | set     | getLong  -> FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD), FAIL(NOPERM User reader has no permissions to run the 'set' comma)
+MASTER_SLAVE | fresh | IN_MEMORY          | none    | bitField -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY          | none    | getLong  -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY          | publish | bitField -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY          | publish | getLong  -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY          | eval    | bitField -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY          | eval    | getLong  -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY          | set     | bitField -> FAIL(NOPERM User reader has no permissions to run the 'set' comma), FAIL(NOPERM User reader has no permissions to run the 'set' comma)
+MASTER_SLAVE | fresh | IN_MEMORY          | set     | getLong  -> FAIL(NOPERM User reader has no permissions to run the 'set' comma), FAIL(NOPERM User reader has no permissions to run the 'set' comma)
+MASTER_SLAVE | fresh | IN_MEMORY_ATOMIC   | none    | bitField -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY_ATOMIC   | none    | getLong  -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY_ATOMIC   | publish | bitField -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY_ATOMIC   | publish | getLong  -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY_ATOMIC   | eval    | bitField -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY_ATOMIC   | eval    | getLong  -> OK, OK
+MASTER_SLAVE | fresh | IN_MEMORY_ATOMIC   | set     | bitField -> FAIL(EXECABORT Transaction discarded because of previous errors.), FAIL(EXECABORT Transaction discarded because of previous errors.)
+MASTER_SLAVE | fresh | IN_MEMORY_ATOMIC   | set     | getLong  -> FAIL(EXECABORT Transaction discarded because of previous errors.), FAIL(EXECABORT Transaction discarded because of previous errors.)
+MASTER_SLAVE | fresh | REDIS_WRITE_ATOMIC | none    | bitField -> OK, OK
+MASTER_SLAVE | fresh | REDIS_WRITE_ATOMIC | none    | getLong  -> FAIL(Redis server response timeout (3000 ms) occurred after 0 of ), FAIL(Redis server response timeout (3000 ms) occurred after 0 of )
+MASTER_SLAVE | fresh | REDIS_WRITE_ATOMIC | publish | bitField -> OK, OK
+MASTER_SLAVE | fresh | REDIS_WRITE_ATOMIC | publish | getLong  -> FAIL(Redis server response timeout (3000 ms) occurred after 0 of ), FAIL(Redis server response timeout (3000 ms) occurred after 0 of )
+MASTER_SLAVE | fresh | REDIS_WRITE_ATOMIC | eval    | bitField -> OK, OK
+MASTER_SLAVE | fresh | REDIS_WRITE_ATOMIC | eval    | getLong  -> FAIL(Redis server response timeout (3000 ms) occurred after 0 of ), FAIL(Redis server response timeout (3000 ms) occurred after 0 of )
+MASTER_SLAVE | fresh | REDIS_WRITE_ATOMIC | set     | bitField -> FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD), FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD)
+MASTER_SLAVE | fresh | REDIS_WRITE_ATOMIC | set     | getLong  -> FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD), FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD)
+MASTER_SLAVE | known | IN_MEMORY          | none    | bitField -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY          | none    | getLong  -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY          | publish | bitField -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY          | publish | getLong  -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY          | eval    | bitField -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY          | eval    | getLong  -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY          | set     | bitField -> FAIL(NOPERM User reader has no permissions to run the 'set' comma), FAIL(NOPERM User reader has no permissions to run the 'set' comma)
+MASTER_SLAVE | known | IN_MEMORY          | set     | getLong  -> FAIL(NOPERM User reader has no permissions to run the 'set' comma), FAIL(NOPERM User reader has no permissions to run the 'set' comma)
+MASTER_SLAVE | known | IN_MEMORY_ATOMIC   | none    | bitField -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY_ATOMIC   | none    | getLong  -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY_ATOMIC   | publish | bitField -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY_ATOMIC   | publish | getLong  -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY_ATOMIC   | eval    | bitField -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY_ATOMIC   | eval    | getLong  -> OK, OK
+MASTER_SLAVE | known | IN_MEMORY_ATOMIC   | set     | bitField -> FAIL(EXECABORT Transaction discarded because of previous errors.), FAIL(EXECABORT Transaction discarded because of previous errors.)
+MASTER_SLAVE | known | IN_MEMORY_ATOMIC   | set     | getLong  -> FAIL(EXECABORT Transaction discarded because of previous errors.), FAIL(EXECABORT Transaction discarded because of previous errors.)
+MASTER_SLAVE | known | REDIS_WRITE_ATOMIC | none    | bitField -> OK, OK
+MASTER_SLAVE | known | REDIS_WRITE_ATOMIC | none    | getLong  -> OK, OK
+MASTER_SLAVE | known | REDIS_WRITE_ATOMIC | publish | bitField -> OK, OK
+MASTER_SLAVE | known | REDIS_WRITE_ATOMIC | publish | getLong  -> OK, OK
+MASTER_SLAVE | known | REDIS_WRITE_ATOMIC | eval    | bitField -> OK, OK
+MASTER_SLAVE | known | REDIS_WRITE_ATOMIC | eval    | getLong  -> OK, OK
+MASTER_SLAVE | known | REDIS_WRITE_ATOMIC | set     | bitField -> FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD), FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD)
+MASTER_SLAVE | known | REDIS_WRITE_ATOMIC | set     | getLong  -> FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD), FAIL(Response timeout for queued commands 3000: [(SET), (BITFIELD)
