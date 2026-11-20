@@ -44,6 +44,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -165,6 +167,9 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
     private final AtomicBoolean executed = new AtomicBoolean();
 
     private volatile boolean bitFieldReadUsed;
+    private final AtomicBoolean bitFieldROChecked = new AtomicBoolean();
+    private final AtomicReference<CompletableFuture<Void>> queuedCommandsFuture =
+                                                new AtomicReference<>(CompletableFuture.completedFuture(null));
 
     private final DelayStrategy retryDelay;
     private final int retryAttempts;
@@ -216,12 +221,7 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
             Codec codec, RedisCommand<V> command, Object[] params, boolean ignoreRedirect, boolean noRetry) {
         CompletableFuture<R> mainPromise = createPromise();
         if (isRedisBasedQueue()) {
-            boolean isReadOnly = options.getExecutionMode() == ExecutionMode.REDIS_READ_ATOMIC;
-            RedisCommand<V> queuedCommand = resolveQueuedBitFieldCommand(readOnlyMode, command, params);
-            RedisExecutor<V, R> executor = new RedisQueuedBatchExecutor<>(isReadOnly, nodeSource, codec, queuedCommand, params, mainPromise,
-                    false, connectionManager, objectBuilder, commands, connections, options, index, executed,
-                    referenceType, noRetry, aggregatedCommands);
-            executor.execute();
+            addQueuedCommand(readOnlyMode, nodeSource, codec, command, params, mainPromise, noRetry);
         } else {
             if (readOnlyMode && isBitFieldROApplicable(command, params)) {
                 bitFieldReadUsed = true;
@@ -274,6 +274,10 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
             throw new IllegalStateException("Batch already executed!");
         }
 
+        if (!queuedCommandsFuture.get().isDone()) {
+            return afterQueuedCommands(this::discardAsync);
+        }
+
         executed.set(true);
         if (isRedisBasedQueue()) {
             aggregatedCommands = new ConcurrentHashMap<>();
@@ -316,7 +320,11 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
         if (executed.get()) {
             throw new IllegalStateException("Batch already executed!");
         }
-        
+
+        if (!queuedCommandsFuture.get().isDone()) {
+            return afterQueuedCommands(this::executeAsync);
+        }
+
         if (commands.isEmpty() && nestedServices.isEmpty()) {
             executed.set(true);
             connections.values().forEach(c -> c.getCancelCallback().run());
@@ -618,7 +626,57 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
         }
     }
 
-    // a queued command is sent as soon as it's added, so BITFIELD_RO can't be checked before it
+    // a queued command is sent as soon as it's added, so BITFIELD_RO is checked before the first BITFIELD read.
+    // Commands added during the check wait for it, otherwise they would be sent ahead of that read
+    private <V, R> void addQueuedCommand(boolean readOnlyMode, NodeSource nodeSource, Codec codec, RedisCommand<V> command,
+                                            Object[] params, CompletableFuture<R> mainPromise, boolean noRetry) {
+        boolean checkRequired = readOnlyMode && isBitFieldROApplicable(command, params)
+                                    && getServiceManager().getBitFieldROState() == BitFieldROState.UNKNOWN
+                                    && bitFieldROChecked.compareAndSet(false, true);
+        if (!checkRequired && queuedCommandsFuture.get().isDone()) {
+            sendQueuedCommand(readOnlyMode, nodeSource, codec, command, params, mainPromise, noRetry);
+            return;
+        }
+
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CompletionStage<Void> prevFuture = queuedCommandsFuture.getAndSet(future);
+        if (checkRequired) {
+            prevFuture = prevFuture.thenCompose(v -> checkBitFieldRO(nodeSource, params[0]));
+        }
+        prevFuture.whenComplete((r, e) -> {
+            try {
+                sendQueuedCommand(readOnlyMode, nodeSource, codec, command, params, mainPromise, noRetry);
+            } catch (Exception ex) {
+                // the executor fails the promise of the command before it throws
+            } finally {
+                future.complete(null);
+            }
+        });
+    }
+
+    private <V, R> void sendQueuedCommand(boolean readOnlyMode, NodeSource nodeSource, Codec codec, RedisCommand<V> command,
+                                            Object[] params, CompletableFuture<R> mainPromise, boolean noRetry) {
+        boolean isReadOnly = options.getExecutionMode() == ExecutionMode.REDIS_READ_ATOMIC;
+        RedisCommand<V> queuedCommand = resolveQueuedBitFieldCommand(readOnlyMode, command, params);
+        RedisExecutor<V, R> executor = new RedisQueuedBatchExecutor<>(isReadOnly, nodeSource, codec, queuedCommand, params, mainPromise,
+                false, connectionManager, objectBuilder, commands, connections, options, index, executed,
+                referenceType, noRetry, aggregatedCommands);
+        executor.execute();
+    }
+
+    // commands waiting for the BITFIELD_RO check have to be sent before a queued batch is executed or discarded
+    private <T> RFuture<T> afterQueuedCommands(Supplier<RFuture<T>> action) {
+        CompletableFuture<T> promise = new CompletableFuture<>();
+        queuedCommandsFuture.get().whenComplete((r, e) -> {
+            try {
+                transfer(action.get(), promise);
+            } catch (Exception ex) {
+                promise.completeExceptionally(ex);
+            }
+        });
+        return new CompletableFutureWrapper<>(promise);
+    }
+
     private <V> RedisCommand<V> resolveQueuedBitFieldCommand(boolean readOnlyMode, RedisCommand<V> command, Object[] params) {
         if (!readOnlyMode || !isBitFieldROApplicable(command, params)) {
             return command;
@@ -632,6 +690,7 @@ public class CommandBatchService extends CommandAsyncService implements BatchSer
             return new RedisCommand<>(command, "BITFIELD_RO");
         }
 
+        // the state stays unknown if the check has failed with an unrelated error
         return command;
     }
 
